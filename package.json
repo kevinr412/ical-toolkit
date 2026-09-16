@@ -1,0 +1,22 @@
+{
+  "name": "ical-toolkit",
+  "version": "0.1.0",
+  "description": "Parse iCalendar (.ics) files from a file or stdin",
+  "type": "module",
+  "bin": {
+    "ical-toolkit": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc"
+  },
+  "license": "MIT",
+  "author": "kevinr412",
+  "engines": {
+    "node": ">=18"
+  }
+}
