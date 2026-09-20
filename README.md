@@ -32,8 +32,20 @@ $ ical-toolkit calendar.ics
     "summary": "Team standup",
     "description": "Daily sync",
     "location": "Room 4",
-    "start": "20260918T090000",
-    "end": "20260918T093000"
+    "start": {
+      "raw": "20260918T090000",
+      "isDate": false,
+      "isFloating": false,
+      "tzid": "America/New_York",
+      "date": "2026-09-18T13:00:00.000Z"
+    },
+    "end": {
+      "raw": "20260918T093000",
+      "isDate": false,
+      "isFloating": false,
+      "tzid": "America/New_York",
+      "date": "2026-09-18T13:30:00.000Z"
+    }
   }
 ]
 ```
@@ -58,7 +70,7 @@ const calendar = parseIcs(icsText);
 const events = listEvents(calendar);
 
 for (const event of events) {
-  console.log(event.summary, event.start);
+  console.log(event.summary, event.start?.date.toISOString());
 }
 ```
 
@@ -67,11 +79,15 @@ limited to events — `calendar.components` includes every `BEGIN`/`END` block
 in the file (`VTIMEZONE`, `VALARM`, and so on), each with its own
 `properties` array of `{ name, params, value }`.
 
+`DTSTART`/`DTEND` come back as an `IcsDateTime`: `{ raw, date, isDate, isFloating, tzid? }`.
+`date` is always a real `Date` (UTC internally). `isDate` marks a whole-day
+`VALUE=DATE` property. `isFloating` marks a time with no `Z` suffix and no
+`TZID` that the runtime's `Intl` data recognizes — RFC 5545 leaves floating
+times' meaning up to the consumer, and this library resolves them against
+the system's local timezone.
+
 ## Current limitations
 
-- `DTSTART`/`DTEND` are returned as raw ICS date-time strings, not parsed
-  `Date` objects. Doing that correctly means handling `VALUE=DATE`, floating
-  times, and `TZID` lookups, none of which is done yet.
 - No recurrence (`RRULE`) expansion.
 - No serialization back to `.ics` text — parsing only, for now.
 
