@@ -1,6 +1,7 @@
 export {
   parseIcs,
   listEvents,
+  validateCalendar,
   unescapeText,
   parseDateTimeProperty,
   getProperty,
@@ -8,4 +9,4 @@ export {
   findComponents,
   IcsParseError,
 } from './ics.js';
-export type { IcsComponent, IcsProperty, CalendarEvent, IcsDateTime } from './ics.js';
+export type { IcsComponent, IcsProperty, CalendarEvent, IcsDateTime, ValidationIssue } from './ics.js';

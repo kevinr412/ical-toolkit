@@ -280,6 +280,84 @@ export function parseDateTimeProperty(prop: IcsProperty): IcsDateTime {
   return { raw, isDate: false, isFloating: true, tzid, date: new Date(year, month - 1, day, hour, minute, second) };
 }
 
+export interface ValidationIssue {
+  severity: 'error' | 'warning';
+  message: string;
+  path: string;
+}
+
+// Lint-style checks beyond what parseIcs enforces structurally. parseIcs only
+// rejects things that make the component tree itself unrepresentable
+// (unbalanced BEGIN/END, a property with no value); this catches calendars
+// that parse fine but are missing pieces RFC 5545 requires or that a
+// downstream consumer would trip over (e.g. an event ending before it starts).
+export function validateCalendar(calendar: IcsComponent): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+
+  if (calendar.name !== 'VCALENDAR') {
+    issues.push({ severity: 'error', message: `root component is ${calendar.name}, expected VCALENDAR`, path: calendar.name });
+  }
+  if (!getProperty(calendar, 'VERSION')) {
+    issues.push({ severity: 'error', message: 'missing required VERSION property', path: 'VCALENDAR' });
+  }
+  if (!getProperty(calendar, 'PRODID')) {
+    issues.push({ severity: 'error', message: 'missing required PRODID property', path: 'VCALENDAR' });
+  }
+
+  const seenUids = new Set<string>();
+  findComponents(calendar, 'VEVENT').forEach((vevent, index) => {
+    const path = `VCALENDAR > VEVENT[${index}]`;
+
+    const uid = getPropertyValue(vevent, 'UID');
+    if (!uid) {
+      issues.push({ severity: 'error', message: 'missing required UID property', path });
+    } else if (seenUids.has(uid)) {
+      // Legitimate when paired with RECURRENCE-ID (an override of one
+      // instance of a recurring event), which this library doesn't parse
+      // yet, so flag it rather than reject it outright.
+      issues.push({ severity: 'warning', message: `duplicate UID "${uid}" (only expected alongside RECURRENCE-ID)`, path });
+    } else {
+      seenUids.add(uid);
+    }
+
+    if (!getProperty(vevent, 'DTSTAMP')) {
+      issues.push({ severity: 'error', message: 'missing required DTSTAMP property', path });
+    }
+
+    if (!getPropertyValue(vevent, 'SUMMARY')) {
+      issues.push({ severity: 'warning', message: 'missing SUMMARY property', path });
+    }
+
+    const dtstartProp = getProperty(vevent, 'DTSTART');
+    let start: IcsDateTime | undefined;
+    if (!dtstartProp) {
+      issues.push({ severity: 'error', message: 'missing required DTSTART property', path });
+    } else {
+      try {
+        start = parseDateTimeProperty(dtstartProp);
+      } catch (err) {
+        issues.push({ severity: 'error', message: `invalid DTSTART value: ${(err as Error).message}`, path });
+      }
+    }
+
+    const dtendProp = getProperty(vevent, 'DTEND');
+    let end: IcsDateTime | undefined;
+    if (dtendProp) {
+      try {
+        end = parseDateTimeProperty(dtendProp);
+      } catch (err) {
+        issues.push({ severity: 'error', message: `invalid DTEND value: ${(err as Error).message}`, path });
+      }
+    }
+
+    if (start && end && end.date.getTime() < start.date.getTime()) {
+      issues.push({ severity: 'error', message: 'DTEND is before DTSTART', path });
+    }
+  });
+
+  return issues;
+}
+
 export function listEvents(calendar: IcsComponent): CalendarEvent[] {
   return findComponents(calendar, 'VEVENT').map((vevent) => {
     const text = (name: string): string | undefined => {
