@@ -218,7 +218,7 @@ function timeZoneOffsetMs(date: Date, timeZone: string): number {
 // (treating the wall clock as if it were already UTC) can be off by the
 // zone's offset; one correction pass resolves that for all but clock times
 // that fall inside a DST fall-back overlap.
-function zonedTimeToUtc(
+export function zonedTimeToUtc(
   year: number,
   month: number,
   day: number,

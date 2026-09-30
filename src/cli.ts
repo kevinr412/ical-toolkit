@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { readFileSync } from 'node:fs';
 import { parseIcs, listEvents, validateCalendar } from './ics.js';
+import { listOccurrences } from './rrule.js';
 
 function readStdin(): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -56,8 +57,39 @@ async function runValidate(arg: string | undefined): Promise<void> {
   }
 }
 
+async function runExpand(args: string[]): Promise<void> {
+  let limit = 50;
+  let path: string | undefined;
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--limit') {
+      limit = Number(args[++i]);
+      if (!Number.isInteger(limit) || limit < 1) {
+        console.error('ical-toolkit: --limit needs a positive integer');
+        process.exitCode = 1;
+        return;
+      }
+    } else {
+      path = args[i];
+    }
+  }
+
+  const text = await readInput(path);
+  try {
+    const occurrences = listOccurrences(parseIcs(text), limit);
+    console.log(JSON.stringify(occurrences, null, 2));
+  } catch (err) {
+    console.error(`ical-toolkit: ${(err as Error).message}`);
+    process.exitCode = 1;
+  }
+}
+
 async function main(): Promise<void> {
   const [first, second] = process.argv.slice(2);
+
+  if (first === 'expand') {
+    await runExpand(process.argv.slice(3));
+    return;
+  }
 
   if (first === 'validate') {
     await runValidate(second);

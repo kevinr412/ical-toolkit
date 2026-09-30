@@ -78,6 +78,16 @@ WARNING: VCALENDAR > VEVENT[2]: missing SUMMARY property
 Takes the same file-path-or-stdin argument as the default command. Exits
 non-zero if any issue is an error; warnings alone don't affect the exit code.
 
+### expand
+
+`expand` prints every event's start times with `RRULE`s expanded, sorted by
+time. Rules with neither `COUNT` nor `UNTIL` are capped at 50 occurrences per
+event; change that with `--limit`.
+
+```
+$ ical-toolkit expand calendar.ics --limit 10
+```
+
 ## Library usage
 
 ```ts
@@ -108,7 +118,11 @@ returning an array of `{ severity, message, path }` instead of printing them.
 
 ## Current limitations
 
-- No recurrence (`RRULE`) expansion.
+- `RRULE` expansion covers `DAILY`, `WEEKLY`, `MONTHLY` and `YEARLY` with
+  `INTERVAL`, `COUNT`, `UNTIL`, `WKST`, `BYDAY`, `BYMONTHDAY` and `BYMONTH`.
+  Other parts (`BYSETPOS`, `BYWEEKNO`, `BYHOUR`, ...) and sub-daily
+  frequencies raise an error. `EXDATE`, `RDATE` and `RECURRENCE-ID`
+  overrides are not applied.
 - No serialization back to `.ics` text — parsing only, for now.
 
 ## License
